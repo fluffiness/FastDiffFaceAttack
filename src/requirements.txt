@@ -1,0 +1,8 @@
+diffusers==0.30.3
+pillow==10.4.0
+timm==0.4.12
+tqdm==4.67.1
+pretrainedmodels==0.7.4
+transformers==4.46.3
+accelerate==1.0.1
+lpips==0.1.4
