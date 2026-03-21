@@ -18,9 +18,6 @@ from faceutils.attention_loss import cross_attention_loss, attn_structural_loss,
 from faceutils.timer import Timer, sec2hms
 from faceutils.constants import THRES_DICT, KEY_WORDS
 
-from assets.semseg.model import BiSeNet
-
-
 from faceutils.optimizers import AdamW, PGD, SGD, MIFGSM
 from faceutils.attention_control_utils import register_attention_control, reset_attention_control, aggregate_attention
 from faceutils.attention_control import StructureLossAttentionStore, AttentionStore

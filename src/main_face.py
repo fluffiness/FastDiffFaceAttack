@@ -21,7 +21,6 @@ from faceutils.utils import embed_prompt, get_noise_pred, diffusion_step, image2
 
 from faceutils.constants import AGE_GENDER_RACE_MAP
 
-from assets.semseg.model import BiSeNet
 from face_latent_attack import attack
 from config import get_config, Config
 
