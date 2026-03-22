@@ -1,28 +1,39 @@
+# outputs
+**/output/
+
+# imgs
+**/img/
+
+# assets
+**/assets/
+
 # large files
-*.tar.gz
-*.zip
+**/*.tar.gz
+**/*.zip
 
 # reference repos
-externals/
+**/externals/
 
 # cache
-latent_cache/
-latent_cache_old/
+**/latent_cache/
+**/latent_cache_old/
 
 # logs
-logs/
+**/logs/
+**/logs2/
 
 # dataset
-ffhq/*
-/datasets/*
+**/ffhq/
+**/datasets/
 *.mdb
-
-# downloaded files
-*.zip
+**/CelebAMask-HQ/
 
 # model checkpoints
-*.ckpt
-*.pkl
+**/*.ckpt
+**/*.pkl
+**/pretrained_models/
+**/ckpt/
+**/*.pth
 
 # misc
 __MACOSX

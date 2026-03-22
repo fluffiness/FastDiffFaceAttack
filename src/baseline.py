@@ -21,7 +21,6 @@ from faceutils.utils import embed_prompt, get_noise_pred, diffusion_step, sample
 
 import torch.nn.functional as F
 
-from assets.semseg.model import BiSeNet
 from face_latent_attack import attack
 from config import get_config, Config
 

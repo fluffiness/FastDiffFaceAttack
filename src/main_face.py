@@ -56,7 +56,6 @@ def create_datasets(
     logger: DatetimeLogger,
     ext: str="jpg"
 ) -> Tuple[List[IDLatentPromptDataset], List[IDLatentPromptDataset]]:
-# ) -> Tuple[List[FaceLatentDataset], List[FaceLatentDataset]]:
     """
     Create train and test sets for the n=num_train_ids identities with the most images.
     The training sets are chosen as the first train_set_size imgs of each id in annotations.json.
@@ -94,8 +93,15 @@ def create_datasets(
     return train_sets, test_sets
 
 
-def invert_target(model: DiffusionPipeline, config: Config):
-
+def invert_target(model: DiffusionPipeline, config: Config) -> Dict:
+    """
+    returns target_data = {
+        "image": Image.Image,
+        "prompt": str,
+        "latent": torch.Tensor,
+        "att_maps": dict
+    }
+    """
     res = config.dataset.res
     num_inference_steps = config.diffusion.diffusion_steps
     num_fixed_point_iters = config.diffusion.num_fixed_point_iters
@@ -117,11 +123,6 @@ def invert_target(model: DiffusionPipeline, config: Config):
 
         gender = id_attribute["target"]["gender"]
         gender_str = AGE_GENDER_RACE_MAP["gender"][gender]
-        # if config.dataset.prompt_type == "face":
-        #     prompt = "face"
-        # elif config.dataset.prompt_type == "gender":
-        #     prompt = generate_prompt(gender_str)
-        # else:
         race = id_attribute["target"]["race"]
         race_str = AGE_GENDER_RACE_MAP["race"][race]
         age = attributes["target"]["age"]
@@ -132,15 +133,6 @@ def invert_target(model: DiffusionPipeline, config: Config):
         prompt = config.dataset.target_prompt
         target_data["prompt"] = prompt
 
-    # inversion_fn = cached_inversion(accelerated_invert, config, model)
-    # target_latent = inversion_fn(
-    #     img_path=target_file_path,
-    #     prompt=prompt,
-    #     guidance_scale = guidance_scale,
-    #     num_inference_steps=num_inference_steps,
-    #     num_fixed_point_iters=num_fixed_point_iters,
-    #     start_step=start_step
-    # )
     logger.log(f"Inverting target image with prompt: {target_data['prompt']}")
     target_latent = accelerated_invert(
         model=model,

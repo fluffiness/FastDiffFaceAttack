@@ -20,7 +20,6 @@ from faceutils.attention_control import AttentionStore
 from faceutils.attention_control_utils import register_attention_control, reset_attention_control, aggregate_attention
 from faceutils.utils import embed_prompt, get_noise_pred, diffusion_step, sample, tensor2image, image2tensor
 
-from assets.semseg.model import BiSeNet
 from face_latent_attack import attack
 from config import get_config, Config
 
