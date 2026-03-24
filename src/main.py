@@ -1,12 +1,14 @@
-import torch
-from typing import Optional, Tuple, List, Union, Dict
-import numpy as np
 import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
+
+from typing import Tuple, List, Dict
 import random
 from PIL import Image
 import json
 import argparse
-from tqdm import tqdm
+
+import numpy as np
+import torch
 from diffusers import DiffusionPipeline, StableDiffusionPipeline, DDIMScheduler
 
 from faceutils.datasets import IDLatentPromptDataset, generate_prompt, GroupLatentPromptDataset
@@ -26,16 +28,10 @@ from config import get_config, Config
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config_file', default="./config.yaml", type=str, help='Path to the default config file.')
-
-# parser.add_argument('--num_train_ids', default=20, type=int)
-# parser.add_argument('--prompt_type', default='age_gender_race', type=str)
-# parser.add_argument('--pairwise_loss_weight', default=0.1, type=float)
-# parser.add_argument('--cross_attn_reg_weight', default=3000.0, type=float)
-# parser.add_argument('--ca_jtmo', default=0, type=int)
-# parser.add_argument('--total_update_steps', default=64, type=int)
-
 args = parser.parse_args()
 config = get_config(args)
+
+
 
 def seed_torch(seed=42):
     """For reproducibility"""
@@ -57,8 +53,7 @@ def create_datasets(
     ext: str="jpg"
 ) -> Tuple[List[IDLatentPromptDataset], List[IDLatentPromptDataset]]:
     """
-    Create train and test sets for the n=num_train_ids identities with the most images.
-    The training sets are chosen as the first train_set_size imgs of each id in annotations.json.
+    Create train and test sets for the n=num_train_ids according to the annotation file.
     """
     dataset_path = config.dataset.images_root
     train_set_size = config.dataset.train_set_size

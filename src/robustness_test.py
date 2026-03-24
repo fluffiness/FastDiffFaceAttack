@@ -68,7 +68,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_img", default="../datasets/celebahq_all_images/test/047073.jpg", type=str)
     parser.add_argument("--fr_model_names", nargs='+', default=['mobile_face', 'ir152', 'irse50', 'facenet'])
     # parser.add_argument("--test_model_name", default="facenet", type=str)
-    parser.add_argument("--fr_model_dir", default="./assets/victim_models", type=str)
+    parser.add_argument("--fr_model_dir", default="./fr_models", type=str)
     parser.add_argument("--defenses", nargs='+', default=["undefended", "median_blur", "feature_squeezing", "gaussian_blur", "jpeg"])
     parser.add_argument("--batch_size", default=16, type=int)
     parser.add_argument("--bit_depth", default=3, type=int)

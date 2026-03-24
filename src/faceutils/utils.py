@@ -4,8 +4,7 @@ import numpy as np
 from typing import List, Union, Tuple, Dict, Optional, Callable
 import torch.nn as nn
 from diffusers import DiffusionPipeline
-from assets.victim_models import irse, ir152, facenet
-import torchvision.transforms as tfms
+from fr_models import irse, ir152, facenet
 import torch.nn.functional as F
 import os
 

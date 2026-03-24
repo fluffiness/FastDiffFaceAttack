@@ -9,7 +9,7 @@ with zipfile.ZipFile(celebamaskhq_zip_path) as zip_ref:
     zip_ref.extractall()
 # os.remove(celebamaskhq_zip_path)
 
-with open("./annotations/celeb_anno.json", "r") as f:
+with open("./files/celeb_anno.json", "r") as f:
     anno = json.load(f)
 
 dst_dataset_dir = "./datasets/celebamaskhq_identity_dataset"
@@ -30,7 +30,7 @@ for identity in anno["victim_ids"]:
 print("Removing extracted files...")
 shutil.rmtree("./CelebAMask-HQ")
 
-anno_dir = "./annotations"
+anno_dir = "./files"
 dst_anno_dir = os.path.join(dst_dataset_dir, "annotations")
 os.makedirs(dst_anno_dir, exist_ok=True)
 

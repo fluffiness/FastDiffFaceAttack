@@ -17,7 +17,7 @@ dataset:
   res: 512 # Input image resized resolution
 
 diffusion:
-  pretrained_diffusion_path: "stabilityai/stable-diffusion-2-base"
+  pretrained_diffusion_path: "sd2-community/stable-diffusion-2-base"
   diffusion_steps: 20 # Total DDIM sampling steps
   num_fixed_point_iters: 6 # 6, 10 # number of maximum fixed-point iteration in AIDI
   start_step: 15 # 15, 10 # Which DDIM step at which to start the attack
@@ -26,14 +26,14 @@ diffusion:
 training:
   seed: 42
   save_dir: "../logs" # Where to save the adversarial examples, and other results
-  victim_model_dir: "./assets/victim_models" # Path to definitions and checkpoints of victim models
+  victim_model_dir: "./fr_models" # Path to definitions and checkpoints of victim models
   all_model_names: ['mobile_face', 'ir152', 'irse50', 'facenet']
   test_model_names: ['mobile_face', 'ir152', 'irse50', 'facenet'] # available models: ['mobile_face', 'ir152', 'irse50', 'facenet']
   surrogate_model_names: ['mobile_face', 'ir152', 'irse50'] # available models: ['mobile_face', 'ir152', 'irse50', 'facenet']
   optim_algo: "pgd" # choice of optimization algorithm from ['adamw', 'adam', 'pgd', "mifgsm"]
   memory_efficient: 1 # use memory efficient gradient algo
   monitor_memory: 0
-  lr: 0.02 # 0.025 # learning rate
+  lr: 0.025 # learning rate
   warm_up_steps: 8 
   weight_decay: 0.001 # weight decay for adamw
   pgd_radius: 2.0 # the radius constrain for PGD optimization
@@ -42,7 +42,7 @@ training:
   total_update_steps: 80 # 64 # total_update_steps = n_epoch * (train_set_size // batch_size)
   attack_loss_weight: 10 # 10 # attack loss weight factor
   ca_loss_is_targeted: 1 # 1 for targetd and 0 for untargeted
-  cross_attn_loss_weight: 25000 # 10000 # targeted cross attention loss weight factor.
+  cross_attn_loss_weight: 20000 # 10000 # targeted cross attention loss weight factor.
   cross_attn_reg_weight: 3000
   words: []
   self_attn_loss_weight: 0 # 1000 # 4000 # 2000 # 1000 # self attention loss weight factors

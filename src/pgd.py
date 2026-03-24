@@ -33,7 +33,7 @@ parser.add_argument('--warm_up_iters', default=8, type=int)
 parser.add_argument('--norm_type', default='linf', type=str, choices=['linf', 'l2'])
 parser.add_argument('--surrogate_model_names', nargs='+', default=['mobile_face', 'ir152', 'irse50'])
 parser.add_argument('--test_model_names', nargs='+', default=['mobile_face', 'ir152', 'irse50', 'facenet'])
-parser.add_argument('--victim_model_dir', default="./assets/victim_models", type=str)
+parser.add_argument('--victim_model_dir', default="./fr_models", type=str)
 parser.add_argument('--do_attack', default=1, type=int)
 
 
