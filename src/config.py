@@ -38,19 +38,27 @@ class Config():
 
 
 def get_default_config(config_path) -> dict:
-    """Load the YAML configuration file"""
+    """Loads the YAML configuration file"""
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
     return config
 
 
-def process_arguments(config_dict: dict, args_dict: dict) -> dict:
+def process_arguments(config_dict: dict, args_dict: dict, is_root: bool=True) -> dict:
     """Updates the config with CLI arguments"""
-    for k, v in config_dict.items():
-        if isinstance(v, dict):
-            process_arguments(v, args_dict)
-        elif k in args_dict:
-            config_dict[k] = args_dict[k]
+    if args_dict:
+        for k, v in config_dict.items():
+            if isinstance(v, dict):
+                process_arguments(v, args_dict, False)
+            elif k in args_dict:
+                config_dict[k] = args_dict[k]
+                args_dict.pop(k)
+    if "config_file" in args_dict:
+        args_dict.pop("config_file")
+    if is_root and args_dict:
+        config_dict["extra"] = {}
+        for k, v in args_dict.items():
+            config_dict["extra"][k] = v
     return config_dict
 
 

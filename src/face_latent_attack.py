@@ -272,7 +272,7 @@ def identity_attack_memory_efficient(
 
             grad = grad.sum(dim=0, keepdim=True)
             optimizer(grad)
-            logger.log(f"epoch{e}, iteration{it}", out=False)
+            logger.log(f"epoch{e}, iteration{it}")
             logger.log((
                 f"    adv_loss: {adv_loss.item():.3f}, "
                 f"cross_attention_loss: {ca_loss.item():.3f}, "
@@ -470,7 +470,7 @@ def identity_attack_regular(
             ca_loss = torch.tensor(0.0).to(device) # cross-attention loss
 
             optimizer(grad)
-            logger.log(f"epoch{e}, iteration{it}", out=False)
+            logger.log(f"epoch{e}, iteration{it}")
             logger.log((
                 f"    adv_loss: {adv_loss.item():.3f}, "
                 f"cross_attention_loss: {ca_loss.item():.3f}, "

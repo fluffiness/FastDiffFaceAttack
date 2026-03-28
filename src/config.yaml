@@ -1,12 +1,12 @@
 dataset: 
   images_root: "../datasets/celebamaskhq_identity_dataset/imgs" # The clean images root directory
-  annotations: "../datasets/celebamaskhq_identity_dataset/annotations/celeb_anno.json"
+  annotations: "../files/celeb_anno.json"
   dataset_name: "celebamaskhq" # dataset name for creating cache directory. in ["celebamaskhq_align", "fiw_align"]
   cache_dir: "../latent_cache" # root cache directory
-  attribute_path: "../datasets/celebamaskhq_identity_dataset/annotations/attributes.json" # age, gender, race for each image
-  id_attribute_path: "../datasets/celebamaskhq_identity_dataset/annotations/id_attributes.json" # gender and race for each id
-  target_path: "../datasets/celebamaskhq_identity_dataset/target/085807.jpg"
-  test_path: "../datasets/celebamaskhq_identity_dataset/test/047073.jpg"
+  attribute_path: "../files/attributes.json" # age, gender, race for each image
+  id_attribute_path: "../files/id_attributes.json" # gender and race for each id
+  target_path: "../files/target/085807.jpg"
+  test_path: "../files/test/047073.jpg"
   auto_prompt: 0
   target_prompt: "A young Caucasian woman in her late teens to early twenties, with clear light skin and subtle freckles, large almond-shaped brown eyes, thick dark slightly arched eyebrows, an oval-shaped face with smooth contours, a straight nose, and medium-full well-defined lips."
   prompt_type: "gender" # two styles: ["gender", "age_gender_race", "face"]
@@ -29,7 +29,7 @@ training:
   victim_model_dir: "./fr_models" # Path to definitions and checkpoints of victim models
   all_model_names: ['mobile_face', 'ir152', 'irse50', 'facenet']
   test_model_names: ['mobile_face', 'ir152', 'irse50', 'facenet'] # available models: ['mobile_face', 'ir152', 'irse50', 'facenet']
-  surrogate_model_names: ['mobile_face', 'ir152', 'irse50'] # available models: ['mobile_face', 'ir152', 'irse50', 'facenet']
+  surrogate_model_names: ['ir152', 'irse50', 'facenet'] # available models: ['mobile_face', 'ir152', 'irse50', 'facenet']
   optim_algo: "pgd" # choice of optimization algorithm from ['adamw', 'adam', 'pgd', "mifgsm"]
   memory_efficient: 1 # use memory efficient gradient algo
   monitor_memory: 0

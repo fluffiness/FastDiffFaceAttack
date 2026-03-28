@@ -1,11 +1,11 @@
 import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
-
 from typing import Tuple, List, Dict
 import random
 from PIL import Image
 import json
 import argparse
+
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 
 import numpy as np
 import torch
@@ -30,8 +30,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--config_file', default="./config.yaml", type=str, help='Path to the default config file.')
 args = parser.parse_args()
 config = get_config(args)
-
-
 
 def seed_torch(seed=42):
     """For reproducibility"""
@@ -82,8 +80,6 @@ def create_datasets(
     logger.log(f"num_identities: {num_train_ids}")
     logger.log(f"train_img_count: {num_train_ids * train_set_size}")
     logger.log(f"test_img_count: {num_train_ids * (16 - train_set_size)}")
-
-    targets = anno["assigned_targets"][start_idx: start_idx+num_train_ids]
 
     return train_sets, test_sets
 
