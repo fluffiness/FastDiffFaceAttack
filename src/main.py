@@ -4,11 +4,13 @@ import random
 from PIL import Image
 import json
 import argparse
+from tqdm import tqdm
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 
 import numpy as np
 import torch
+import torch.nn.functional as F
 from diffusers import DiffusionPipeline, StableDiffusionPipeline, DDIMScheduler
 
 from faceutils.datasets import IDLatentPromptDataset, generate_prompt, GroupLatentPromptDataset
@@ -19,15 +21,17 @@ from faceutils.timer import Timer
 from faceutils.inversions import accelerated_invert, cached_inversion
 from faceutils.attention_control import AttentionStore
 from faceutils.attention_control_utils import register_attention_control, reset_attention_control, aggregate_attention
-from faceutils.utils import embed_prompt, get_noise_pred, diffusion_step, image2latent, monitor_gpu_memory
+from faceutils.utils import embed_prompt, get_noise_pred, diffusion_step, image2latent, monitor_gpu_memory, sample, image2tensor, tensor2image
 
-from faceutils.constants import AGE_GENDER_RACE_MAP
+from faceutils.constants import AGE_GENDER_RACE_MAP, THRES_DICT
 
 from face_latent_attack import attack
 from config import get_config, Config
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--config_file', default="./config.yaml", type=str, help='Path to the default config file.')
+parser.add_argument('--eval', action='store_true', help="If set, evaluate without training")
+parser.add_argument('--eval_dir', default="", type=str, help="The directory to evaluate. Must be provided if the --eval flag is set.")
 args = parser.parse_args()
 config = get_config(args)
 
@@ -47,7 +51,7 @@ seed_torch(config.training.seed)
 def create_datasets(
     model,
     config: Config,
-    logger: DatetimeLogger,
+    logger: DatetimeLogger=None,
     ext: str="jpg"
 ) -> Tuple[List[IDLatentPromptDataset], List[IDLatentPromptDataset]]:
     """
@@ -75,16 +79,17 @@ def create_datasets(
         test_set = IDLatentPromptDataset(model, config, id_dir, test_set_files)
         train_sets.append(train_set)
         test_sets.append(test_set)
-        
-    logger.log(f"identities in dataset: {victim_ids}")
-    logger.log(f"num_identities: {num_train_ids}")
-    logger.log(f"train_img_count: {num_train_ids * train_set_size}")
-    logger.log(f"test_img_count: {num_train_ids * (16 - train_set_size)}")
+    
+    if logger:
+        logger.log(f"identities in dataset: {victim_ids}")
+        logger.log(f"num_identities: {num_train_ids}")
+        logger.log(f"train_img_count: {num_train_ids * train_set_size}")
+        logger.log(f"test_img_count: {num_train_ids * (16 - train_set_size)}")
 
     return train_sets, test_sets
 
 
-def invert_target(model: DiffusionPipeline, config: Config) -> Dict:
+def invert_target(model: DiffusionPipeline, config: Config, logger: DatetimeLogger=None) -> Dict:
     """
     returns target_data = {
         "image": Image.Image,
@@ -124,7 +129,8 @@ def invert_target(model: DiffusionPipeline, config: Config) -> Dict:
         prompt = config.dataset.target_prompt
         target_data["prompt"] = prompt
 
-    logger.log(f"Inverting target image with prompt: {target_data['prompt']}")
+    if logger:
+        logger.log(f"Inverting target image with prompt: {target_data['prompt']}")
     target_latent = accelerated_invert(
         model=model,
         start_latents=image2latent(model, target_data["image"]),
@@ -183,9 +189,12 @@ def group_datasets(trainsets, testsets, num_id_in_group):
 
 if __name__ == "__main__":
     assert config.training.optim_algo in ['adamw', 'adam', 'sgd', 'pgd', 'mifgsm']
+    if config.extra.eval:
+        assert config.extra.eval_dir
 
-    logger = DatetimeLogger(config.training.save_dir)
-    logger.log(repr(config) + '\n')
+    if not config.extra.eval:
+        logger = DatetimeLogger(config.training.save_dir)
+        logger.log(repr(config) + '\n')
     timer = Timer()
 
     device = torch.device(f"cuda" if torch.cuda.is_available() else "cpu")
@@ -202,41 +211,129 @@ if __name__ == "__main__":
     pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
     pipe.scheduler.set_timesteps(num_inference_steps, device=device)
 
-    if config.training.monitor_memory:
+
+    if config.training.monitor_memory and not config.extra.eval:
         monitor_gpu_memory(logger, "After loading SD")
 
     all_model_names = config.training.all_model_names
     surrogate_model_names = config.training.surrogate_model_names
     test_model_names = config.training.test_model_names
     victim_model_dir = config.training.victim_model_dir
+    blackbox_name = [model_name for model_name in all_model_names if model_name not in surrogate_model_names][0]
 
     fr_models = load_test_models(all_model_names, victim_model_dir, device)
     fr_models = ModelEnsemble(fr_models, device)
 
-    if config.training.monitor_memory:
+    if config.training.monitor_memory and not config.extra.eval:
         monitor_gpu_memory(logger, "After loading FR")
 
     # create datasets
     num_id_in_group = config.dataset.num_id_in_group
-    trainsets, testsets = create_datasets(pipe, config, logger)
+    if config.extra.eval:
+        trainsets, testsets = create_datasets(pipe, config)
+    else:
+        trainsets, testsets = create_datasets(pipe, config, logger)
     if num_id_in_group > 1:
         trainsets, testsets = group_datasets(trainsets, testsets, num_id_in_group)
     target_data = invert_target(pipe, config)
-    logger.log('\n')
+    if config.extra.eval:
+        target_data = invert_target(pipe, config)
+    else:
+        target_data = invert_target(pipe, config, logger)
+        logger.log('\n')
+
+    if not config.extra.eval:
+        timer.tic()
+        delta_dict = attack(
+            model=pipe, 
+            trainsets=trainsets, 
+            testsets=testsets, 
+            target_data=target_data, 
+            fr_models=fr_models, 
+            config=config, 
+            logger=logger
+        )
+        timer.toc()
+        logger.log(f"training time: {timer.total()}")
+        timer.clear()
+
+        peak_memory = torch.cuda.max_memory_allocated()
+        logger.log(f"Peak allocated usage: {peak_memory / (1024 ** 2):.2f} MB")
+
+
+
+    ##################################################################
+    #                           Evaluation                           #
+    ##################################################################
+    if config.extra.eval:
+        ckpt_base_dir = config.extra.eval_dir
+    else:
+        ckpt_base_dir = logger.log_dir
+
+    logger_eval = DatetimeLogger(config.training.save_dir, sub_name=f"{os.path.basename(os.path.normpath(ckpt_base_dir))}_eval")
+
+    res = config.dataset.res
+
+    test_file_path = config.dataset.test_path
+    test_img = Image.open(test_file_path).resize((res, res))
+    test_img = image2tensor(test_img, device)
+    test_emb = fr_models(test_img)
 
     timer.tic()
-    delta_dict = attack(
-        model=pipe, 
-        trainsets=trainsets, 
-        testsets=testsets, 
-        target_data=target_data, 
-        fr_models=fr_models, 
-        config=config, 
-        logger=logger
-    )
-    timer.toc()
-    logger.log(f"training time: {timer.total()}")
-    timer.clear()
+    total_img_cnt = 0
+    asc = 0
+    save_dir = os.path.join(logger_eval.log_dir, "imgs")
+    os.makedirs(save_dir, exist_ok=True)
+    for i in tqdm(range(len(testsets)), bar_format='{l_bar}{bar:50}{r_bar}{bar:-10b}'):
+
+        testset = testsets[i]
+        logger_eval.log(f"Testing on id {testset.identity}")
+
+        id_dir = os.path.join(ckpt_base_dir, testset.identity)
+
+        # detect the latest ckpt file
+        max_epoch = 0
+        for id_dir_filenames in os.listdir(id_dir):
+            if "delta" in id_dir_filenames:
+                epoch_no = int(id_dir_filenames[id_dir_filenames.find("epoch")+5: id_dir_filenames.find('.')])
+                max_epoch = epoch_no if epoch_no > max_epoch else max_epoch
+
+        ckpt_file = f"delta_epoch{max_epoch}.pth"
+        logger_eval.log(f"    Generating adv examples using {testset.identity}/{ckpt_file}")
+        ckpt_path = os.path.join(id_dir, ckpt_file)
+        delta = torch.load(ckpt_path).to(device)
+
+        success_nos = []
+        failure_nos = []
+        for i in range(len(testset)):
+            image, latent, prompt = testset[i]
+            latent = latent.unsqueeze(0).to(device)
+            img_no, img_ext = os.path.splitext(testset.image_filenames[i])
+            logger_eval.log(f"        {testset.identity}/{img_no}{img_ext}")
+            adv_latent = latent + delta
+            adv_image_tensor = sample(pipe, prompt, adv_latent, guidance_scale, num_inference_steps, start_step, return_tensor=True ,res=res)
+            adv_embedding = fr_models(adv_image_tensor)
+            simi = F.cosine_similarity(test_emb[blackbox_name], adv_embedding[blackbox_name])
+            thres = THRES_DICT[blackbox_name][1]
+            image = tensor2image(image.unsqueeze(0))[0]
+            adv_image = tensor2image(adv_image_tensor)[0]
+            # image.save(os.path.join(save_dir, f"{img_no}_clean{img_ext}"))
+            adv_image.save(os.path.join(save_dir, f"{int(img_no):06d}{img_ext}"))
+
+            total_img_cnt += 1
+            if simi > thres:
+                success_nos.append(img_no)
+                asc += 1
+            else:
+                failure_nos.append(img_no)
+            
+        logger_eval.log(f"    success: {success_nos}")
+        logger_eval.log(f"    failure: {failure_nos}")
+
+    gen_time = timer.toc(hms=True)
+    logger_eval.log(f"total gen time = {gen_time}, excluding inversion time")
+    logger_eval.log(f"Attack success: {asc} times out of {total_img_cnt}")
+    logger_eval.log(f"ASR={100*asc/total_img_cnt:.3f}")
 
     peak_memory = torch.cuda.max_memory_allocated()
-    logger.log(f"Peak allocated usage: {peak_memory / (1024 ** 2):.2f} MB")
+    logger_eval.log(f"Peak memory usage: {peak_memory / (1024 ** 2):.2f} MB")
